@@ -1,7 +1,7 @@
 import streamlit as st
 import pandas as pd
 import numpy as np
-import requests   # WAJIB untuk download file dari GitHub
+import requests
 
 st.set_page_config(page_title="SPK SAW-TOPSIS", layout="wide")
 
@@ -21,25 +21,54 @@ def go_to_input():
 if st.session_state.page == "dashboard":
 
     st.markdown("""
-    <h1 style='text-align:center; color:#2E86C1;'>📊 Sistem Pendukung Keputusan — SAW → TOPSIS</h1>
-    <p style='text-align:center; font-size:18px;'>
-    Aplikasi ini memproses perhitungan SAW dan TOPSIS secara otomatis dan dinamis.
-    Anda dapat menentukan kriteria, tipe, dan bobot sesuai kebutuhan.
-    </p>
+        <div style='text-align:center; padding: 5px 20px;'>
+            <h1 style='color:#2E86C1; font-size:38px;'>
+                📊 Sistem Pendukung Keputusan <br> Metode SAW → TOPSIS
+            </h1>
+            <p style='font-size:17px; color:#444;'>
+                Aplikasi ini digunakan untuk membantu perankingan alternatif berdasarkan 
+                metode <b>Simple Additive Weighting (SAW)</b> dan 
+                <b>Technique for Order Preference by Similarity to Ideal Solution (TOPSIS)</b>.
+                Pengguna dapat menentukan kriteria, tipe penilaian, serta bobot.
+            </p>
+        </div>
     """, unsafe_allow_html=True)
 
     st.write("---")
 
     col1, col2, col3 = st.columns(3)
+
     with col1:
-        st.info("⚙ **Metode SAW**\n- Normalisasi Benefit/Cost\n- Pembobotan r × w")
+        st.info("""
+        ### ⚙ Metode SAW
+        - Normalisasi Benefit/Cost  
+        - Pembobotan r × w  
+        - Menghasilkan skor awal alternatif
+        """)
+
     with col2:
-        st.warning("📌 **Metode TOPSIS**\n- A+, A−\n- Nilai Preferensi")
+        st.warning("""
+        ### 📌 Metode TOPSIS
+        - Menentukan A+ dan A−  
+        - Menghitung D⁺ dan D⁻  
+        - Menghasilkan nilai preferensi  
+        - Ranking akhir alternatif
+        """)
+
     with col3:
-        st.success("📁 **Input Manual**\n- Pilih kriteria\n- Tentukan bobot\n- Pilih Benefit/Cost")
+        st.success("""
+        ### 📁 Input Manual
+        - Upload dataset (CSV/XLSX)  
+        - Pilih kriteria numerik  
+        - Atur bobot total = 1.00  
+        - Pilih Benefit / Cost  
+        """)
 
     st.write("---")
+    st.markdown("<div style='text-align:center;'>", unsafe_allow_html=True)
     st.button("🚀 MULAI PERHITUNGAN", on_click=go_to_input)
+    st.markdown("</div>", unsafe_allow_html=True)
+
 
 
 # =====================================================
@@ -50,25 +79,31 @@ elif st.session_state.page == "input":
     st.markdown("## 📁 Upload Dataset & Masukkan Kriteria")
 
     # =====================================================
-    # DOWNLOAD DATASET DARI GITHUB
+    # DOWNLOAD DATASET CONTOH DARI GITHUB
     # =====================================================
     st.info("📥 Contoh Dataset dapat diunduh di bawah ini:")
 
     GITHUB_DATASET_URL = "https://raw.githubusercontent.com/Aril0510/SPK/main/Dataset_SPK_ekstrakurikuler.xlsx"
 
-    st.download_button(
-        label="📄 Download Contoh Dataset",
-        data=requests.get(GITHUB_DATASET_URL).content,
-        file_name="Dataset_SPK_ekstrakurikuler.xlsx",
-        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-    )
+    try:
+        dataset_bytes = requests.get(GITHUB_DATASET_URL).content
+
+        st.download_button(
+            label="📄 Download Contoh Dataset",
+            data=dataset_bytes,
+            file_name="Dataset_SPK_ekstrakurikuler.xlsx",
+            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        )
+    except:
+        st.error("❌ Gagal mengambil file dari GitHub (periksa URL).")
+
     # =====================================================
 
     uploaded = st.file_uploader("Upload Dataset (xlsx/csv)", type=["xlsx", "csv"])
 
     if uploaded:
 
-        # baca dataset
+        # Baca dataset
         if uploaded.name.endswith("xlsx"):
             df_raw = pd.read_excel(uploaded)
         else:
@@ -78,19 +113,19 @@ elif st.session_state.page == "input":
         st.dataframe(df_raw.head())
 
         # =====================================================
-        # VALIDASI: hanya kolom numerik yang boleh dipakai sebagai kriteria
+        # VALIDASI NUMERIK
         # =====================================================
         numeric_columns = df_raw.select_dtypes(include=["int64", "float64"]).columns.tolist()
 
         if len(numeric_columns) == 0:
-            st.error("❌ Dataset tidak memiliki kolom numerik.")
+            st.error("❌ Dataset tidak memiliki kolom numerik. Tidak dapat melanjutkan.")
             st.stop()
 
-        st.success(f"✔ {len(numeric_columns)} kolom numerik ditemukan.")
+        st.success(f"✔ Dataset valid — {len(numeric_columns)} kolom numerik ditemukan.")
 
         st.subheader("🔧 Pilih Kolom Kriteria")
 
-        # jumlah kriteria
+        # Jumlah kriteria
         num_criteria = st.number_input(
             "Berapa jumlah kriteria?",
             min_value=1,
@@ -123,16 +158,16 @@ elif st.session_state.page == "input":
         weights = np.array(weights_list)
 
         # =====================================================
-        # VALIDASI BOBOT HARUS = 1.00
+        # VALIDASI BOBOT = 1
         # =====================================================
-        total_weight = weights.sum()
-        if round(total_weight, 4) != 1.0:
-            st.error(f"❌ Total bobot = {total_weight:.2f} (harus = 1.00)")
+        total_weight = round(weights.sum(), 4)
+        if total_weight != 1.0:
+            st.error(f"❌ Total bobot = {total_weight:.2f} (harus = 1.00).")
             st.stop()
 
         df = df_raw.copy()
 
-        # pastikan numerik
+        # Pastikan numerik
         for col in criteria_list:
             df[col] = pd.to_numeric(df[col], errors="coerce").fillna(0)
 
@@ -173,7 +208,7 @@ elif st.session_state.page == "input":
 
 
         # =====================================================
-        # TOMBOL PROSES
+        # PROSES SAW → TOPSIS
         # =====================================================
         if st.button("🔍 Proses SAW → TOPSIS"):
 
