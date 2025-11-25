@@ -48,6 +48,21 @@ elif st.session_state.page == "input":
 
     st.markdown("## 📁 Upload Dataset & Masukkan Kriteria")
 
+    # =====================================================
+    # TOMBOL DOWNLOAD DATASET CONTOH
+    # =====================================================
+    st.info("📥 Contoh Dataset dapat diunduh di bawah ini:")
+
+    with open("D:\Semester 5\Dataset_SPK_ekstrakurikuler.xlsx", "rb") as file:
+        st.download_button(
+            label="📄 Download Contoh Dataset",
+            data=file,
+            file_name="Dataset_SPK_ekstrakurikuler.xlsx",
+            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        )
+
+    # =====================================================
+
     uploaded = st.file_uploader("Upload Dataset (xlsx/csv)", type=["xlsx", "csv"])
 
     if uploaded:
@@ -61,14 +76,26 @@ elif st.session_state.page == "input":
         st.subheader("📄 Dataset Original")
         st.dataframe(df_raw.head())
 
-        st.subheader("🔧 Pilih Kolom Kriteria")
+        # =====================================================
+        # VALIDASI: hanya kolom numerik boleh jadi kriteria
+        # =====================================================
+        numeric_columns = df_raw.select_dtypes(include=["int64", "float64"]).columns.tolist()
 
-        all_columns = df_raw.columns.tolist()
+        if len(numeric_columns) == 0:
+            st.error("❌ Dataset tidak memiliki kolom numerik.")
+            st.stop()
+
+        st.success(f"✔ {len(numeric_columns)} kolom numerik ditemukan.")
+
+        st.subheader("🔧 Pilih Kolom Kriteria")
 
         # jumlah kriteria
         num_criteria = st.number_input(
             "Berapa jumlah kriteria?",
-            min_value=1, max_value=20, value=5, step=1
+            min_value=1,
+            max_value=len(numeric_columns),
+            value=1,
+            step=1
         )
 
         criteria_list = []
@@ -82,7 +109,7 @@ elif st.session_state.page == "input":
             c1, c2, c3 = st.columns(3)
 
             with c1:
-                col = st.selectbox("Pilih kolom", all_columns, key=f"crit_{i}")
+                col = st.selectbox("Pilih kolom (Hanya Numerik)", numeric_columns, key=f"crit_{i}")
             with c2:
                 t = st.selectbox("Tipe", ["Benefit", "Cost"], key=f"type_{i}")
             with c3:
@@ -95,23 +122,22 @@ elif st.session_state.page == "input":
         weights = np.array(weights_list)
 
         # =====================================================
-        # VALIDASI TOTAL BOBOT HARUS 1.00
+        # VALIDASI BOBOT
         # =====================================================
         total_weight = weights.sum()
-        if round(total_weight, 4) != 1.0:   # toleransi 4 decimal
-            st.error(f"❌ Total bobot saat ini = {total_weight:.2f}. Total bobot harus = 1.00 (100%).")
-            st.warning("⚠️ Silakan sesuaikan bobot sampai totalnya tepat 1.00.")
+        if round(total_weight, 4) != 1.0:
+            st.error(f"❌ Total bobot = {total_weight:.2f} (harus = 1.00)")
             st.stop()
-        # =====================================================
-
-        # pastikan numerik
-        for col in criteria_list:
-            df_raw[col] = pd.to_numeric(df_raw[col], errors="coerce").fillna(0)
 
         df = df_raw.copy()
 
+        # pastikan numerik
+        for col in criteria_list:
+            df[col] = pd.to_numeric(df[col], errors="coerce").fillna(0)
+
+
         # =====================================================
-        # SAW FUNCTION (FINAL FIXED)
+        # SAW FUNCTION
         # =====================================================
         def compute_saw(df):
             X = df[criteria_list].copy()
@@ -122,22 +148,16 @@ elif st.session_state.page == "input":
                 max_val = col_data.max()
                 min_val = col_data.min()
 
-                # BENEFIT
                 if criteria_type[i] == "Benefit":
-                    if max_val == 0:
-                        norm[col] = 0
-                    else:
-                        norm[col] = col_data / max_val
-
-                # COST
+                    norm[col] = col_data / max_val if max_val != 0 else 0
                 else:
                     col_safe = col_data.replace(0, np.nan)
-                    norm[col] = min_val / col_safe
-                    norm[col] = norm[col].fillna(0)
+                    norm[col] = (min_val / col_safe).fillna(0)
 
             weighted = norm.multiply(weights, axis=1)
             scores = weighted.sum(axis=1)
             return norm, weighted, scores
+
 
         # =====================================================
         # TOPSIS FUNCTION
@@ -152,12 +172,12 @@ elif st.session_state.page == "input":
             pref = D_minus / (D_plus + D_minus)
             return pref, D_plus, D_minus, ideal_pos, ideal_neg
 
+
         # =====================================================
-        # TOMBOL PROSES
+        # PROSES SAW–TOPSIS
         # =====================================================
         if st.button("🔍 Proses SAW → TOPSIS"):
 
-            # SAW Proses
             norm_saw, weighted_saw, saw_scores = compute_saw(df)
 
             df_scores = df.copy()
@@ -166,8 +186,6 @@ elif st.session_state.page == "input":
             df_saw_rank = df_scores.sort_values("SAW_Score", ascending=False).reset_index(drop=True)
             df_saw_rank.insert(0, "Rank_SAW", range(1, len(df_saw_rank) + 1))
 
-
-            # TOPSIS Proses
             preferensi, D_plus, D_minus, ideal_pos, ideal_neg = compute_topsis(weighted_saw)
 
             df_scores["TOPSIS_Score"] = preferensi
@@ -176,16 +194,3 @@ elif st.session_state.page == "input":
 
             st.subheader("📌 Hasil TOPSIS")
             st.dataframe(df_topsis_rank)
-
-            # grafik
-            st.subheader("📈 Grafik Perbandingan SAW vs TOPSIS")
-
-            if "student_id" in df_scores.columns:
-                chart = pd.DataFrame({
-                    "Nama": df_scores["student_id"],
-                    "SAW": df_scores["SAW_Score"],
-                    "TOPSIS": df_scores["TOPSIS_Score"]
-                })
-                st.bar_chart(chart.set_index("Nama"))
-            else:
-                st.info("Kolom 'student_id' tidak ditemukan untuk grafik.")
