@@ -1,6 +1,7 @@
 import streamlit as st
 import pandas as pd
 import numpy as np
+import requests   # WAJIB untuk download file dari GitHub
 
 st.set_page_config(page_title="SPK SAW-TOPSIS", layout="wide")
 
@@ -48,21 +49,19 @@ elif st.session_state.page == "input":
 
     st.markdown("## 📁 Upload Dataset & Masukkan Kriteria")
 
-   # =====================================================
-# TOMBOL DOWNLOAD DATASET CONTOH (DARI GITHUB)
-# =====================================================
-st.info("📥 Contoh Dataset dapat diunduh di bawah ini:")
+    # =====================================================
+    # DOWNLOAD DATASET DARI GITHUB
+    # =====================================================
+    st.info("📥 Contoh Dataset dapat diunduh di bawah ini:")
 
-GITHUB_DATASET_URL = "https://raw.githubusercontent.com/Aril0510/SPK/main/Dataset_SPK_ekstrakurikuler.xlsx"
+    GITHUB_DATASET_URL = "https://raw.githubusercontent.com/Aril0510/SPK/main/Dataset_SPK_ekstrakurikuler.xlsx"
 
-st.download_button(
-    label="📄 Download Contoh Dataset",
-    data=requests.get(GITHUB_DATASET_URL).content,
-    file_name="Dataset_SPK_ekstrakurikuler.xlsx",
-    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-)
-
-
+    st.download_button(
+        label="📄 Download Contoh Dataset",
+        data=requests.get(GITHUB_DATASET_URL).content,
+        file_name="Dataset_SPK_ekstrakurikuler.xlsx",
+        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    )
     # =====================================================
 
     uploaded = st.file_uploader("Upload Dataset (xlsx/csv)", type=["xlsx", "csv"])
@@ -79,7 +78,7 @@ st.download_button(
         st.dataframe(df_raw.head())
 
         # =====================================================
-        # VALIDASI: hanya kolom numerik boleh jadi kriteria
+        # VALIDASI: hanya kolom numerik yang boleh dipakai sebagai kriteria
         # =====================================================
         numeric_columns = df_raw.select_dtypes(include=["int64", "float64"]).columns.tolist()
 
@@ -124,7 +123,7 @@ st.download_button(
         weights = np.array(weights_list)
 
         # =====================================================
-        # VALIDASI BOBOT
+        # VALIDASI BOBOT HARUS = 1.00
         # =====================================================
         total_weight = weights.sum()
         if round(total_weight, 4) != 1.0:
@@ -136,7 +135,6 @@ st.download_button(
         # pastikan numerik
         for col in criteria_list:
             df[col] = pd.to_numeric(df[col], errors="coerce").fillna(0)
-
 
         # =====================================================
         # SAW FUNCTION
@@ -160,7 +158,6 @@ st.download_button(
             scores = weighted.sum(axis=1)
             return norm, weighted, scores
 
-
         # =====================================================
         # TOPSIS FUNCTION
         # =====================================================
@@ -176,7 +173,7 @@ st.download_button(
 
 
         # =====================================================
-        # PROSES SAW–TOPSIS
+        # TOMBOL PROSES
         # =====================================================
         if st.button("🔍 Proses SAW → TOPSIS"):
 
@@ -196,4 +193,3 @@ st.download_button(
 
             st.subheader("📌 Hasil TOPSIS")
             st.dataframe(df_topsis_rank)
-
