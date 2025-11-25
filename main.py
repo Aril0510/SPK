@@ -48,18 +48,20 @@ elif st.session_state.page == "input":
 
     st.markdown("## 📁 Upload Dataset & Masukkan Kriteria")
 
-    # =====================================================
-    # TOMBOL DOWNLOAD DATASET CONTOH
-    # =====================================================
-    st.info("📥 Contoh Dataset dapat diunduh di bawah ini:")
+   # =====================================================
+# TOMBOL DOWNLOAD DATASET CONTOH (DARI GITHUB)
+# =====================================================
+st.info("📥 Contoh Dataset dapat diunduh di bawah ini:")
 
-    with open("D:\Semester 5\Dataset_SPK_ekstrakurikuler.xlsx", "rb") as file:
-        st.download_button(
-            label="📄 Download Contoh Dataset",
-            data=file,
-            file_name="Dataset_SPK_ekstrakurikuler.xlsx",
-            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-        )
+GITHUB_DATASET_URL = "https://raw.githubusercontent.com/Aril0510/SPK/main/Dataset_SPK_ekstrakurikuler.xlsx"
+
+st.download_button(
+    label="📄 Download Contoh Dataset",
+    data=requests.get(GITHUB_DATASET_URL).content,
+    file_name="Dataset_SPK_ekstrakurikuler.xlsx",
+    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+)
+
 
     # =====================================================
 
@@ -194,3 +196,4 @@ elif st.session_state.page == "input":
 
             st.subheader("📌 Hasil TOPSIS")
             st.dataframe(df_topsis_rank)
+
