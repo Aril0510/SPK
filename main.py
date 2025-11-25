@@ -29,7 +29,7 @@ if st.session_state.page == "dashboard":
                 Aplikasi ini digunakan untuk membantu perankingan alternatif berdasarkan 
                 metode <b>Simple Additive Weighting (SAW)</b> dan 
                 <b>Technique for Order Preference by Similarity to Ideal Solution (TOPSIS)</b>.
-                Pengguna dapat menentukan kriteria, tipe penilaian, serta bobot.
+                Anda dapat menentukan kriteria, tipe penilaian, serta bobot.
             </p>
         </div>
     """, unsafe_allow_html=True)
@@ -228,3 +228,4 @@ elif st.session_state.page == "input":
 
             st.subheader("📌 Hasil TOPSIS")
             st.dataframe(df_topsis_rank)
+
