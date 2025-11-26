@@ -23,7 +23,7 @@ if st.session_state.page == "dashboard":
     st.markdown("""
         <div style='text-align:center; padding: 5px 20px;'>
             <h1 style='color:#2E86C1; font-size:38px;'>
-                📊 Sistem Pendukung Keputusan <br> Metode SAW → TOPSIS
+                📊 Sistem Pengambilan Keputusan <br> Metode SAW → TOPSIS
             </h1>
             <p style='font-size:17px; color:#444;'>
                 Aplikasi ini digunakan untuk membantu perankingan alternatif berdasarkan 
@@ -228,4 +228,5 @@ elif st.session_state.page == "input":
 
             st.subheader("📌 Hasil TOPSIS")
             st.dataframe(df_topsis_rank)
+
 
